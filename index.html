@@ -106,8 +106,8 @@ main{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:2rem 1re
 .matches-section{margin:2rem 0}
 .section-title{font-size:1.2rem;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
 .matches-grid{display:grid;gap:.75rem}
-.match-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;display:flex;align-items:center;gap.5rem;flex-wrap:wrap;gap:.5rem}
-.match-teams{display:flex;align-items:center;gap.75rem;flex:1;min-width:200px;gap:.75rem}
+.match-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;display:flex;align-items:center;flex-wrap:wrap;gap:.5rem}
+.match-teams{display:flex;align-items:center;flex:1;min-width:200px;gap:.75rem}
 .match-team{display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.9rem}
 .match-team .flag{font-size:1.2rem}
 .vs-badge{background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:.2rem .6rem;font-size:.75rem;font-weight:700;color:var(--gray);white-space:nowrap}
@@ -197,12 +197,12 @@ hr.gold{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
 </header>
 
 <main>
-  <!-- NAV BAR (hidden until tournament started) -->
+  <!-- NAV BAR (Se pasa 'this' en el onclick) -->
   <div class="nav" id="mainNav" style="display:none">
-    <button class="nav-btn active" onclick="showTab('grupos')">🏆 Grupos</button>
-    <button class="nav-btn" onclick="showTab('partidos')">⚽ Partidos</button>
-    <button class="nav-btn" onclick="showTab('bracket')">🔥 Cruces</button>
-    <button class="nav-btn" onclick="showTab('clasificacion')">📊 Clasificación</button>
+    <button class="nav-btn active" onclick="showTab('grupos', this)">🏆 Grupos</button>
+    <button class="nav-btn" onclick="showTab('partidos', this)">⚽ Partidos</button>
+    <button class="nav-btn" onclick="showTab('bracket', this)">🔥 Cruces</button>
+    <button class="nav-btn" onclick="showTab('clasificacion', this)">📊 Clasificación</button>
     <button class="nav-btn" onclick="resetAll()" style="margin-left:auto;color:var(--red);border-color:var(--red)">🗑 Reiniciar</button>
   </div>
 
@@ -278,9 +278,6 @@ hr.gold{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
 <div class="confetti-wrap" id="confettiWrap"></div>
 
 <script>
-// ============================================================
-// DATA: All 48 World Cup 2026 teams
-// ============================================================
 const TEAMS = [
   {name:"Argentina",flag:"🇦🇷",conf:"CONMEBOL"},
   {name:"Brasil",flag:"🇧🇷",conf:"CONMEBOL"},
@@ -332,23 +329,17 @@ const TEAMS = [
   {name:"Uzbekistán",flag:"🇺🇿",conf:"AFC"},
 ];
 
-// ============================================================
-// STATE
-// ============================================================
 let state = {
-  players:[],        // [{name, team, flag}]
+  players:[],
   numPlayers:0,
   availableTeams:[],
   currentPlayerIdx:0,
-  groups:{},         // {A:[{name,flag,W,D,L,GF,GA}]}
-  matches:[],        // [{id,group,home,away,hScore,aScore,played,round}]
-  knockoutMatches:[], // bracket
-  phase:'group'      // group | knockout
+  groups:{},
+  matches:[],
+  knockoutMatches:[],
+  phase:'group'
 };
 
-// ============================================================
-// SAVE / LOAD
-// ============================================================
 function saveState(){
   try{localStorage.setItem('mundial2026',JSON.stringify(state))}catch(e){}
 }
@@ -360,11 +351,9 @@ function loadState(){
   return false;
 }
 
-// ============================================================
-// PARTICLES
-// ============================================================
 function createParticles(){
   const wrap=document.getElementById('particles');
+  if(!wrap) return;
   const colors=['#c9a84c','#f5d06a','#0052a5','#ffffff','#003380'];
   for(let i=0;i<50;i++){
     const p=document.createElement('div');
@@ -382,31 +371,30 @@ function createParticles(){
   }
 }
 
-// ============================================================
-// SCREENS
-// ============================================================
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const target = document.getElementById(id);
+  if(target) target.classList.add('active');
   if(id==='screen-tournament'){
     document.getElementById('mainNav').style.display='flex';
   }
 }
 
-function showTab(name){
+// CORREGIDO: Ahora recibe de forma explícita el botón presionado (btn)
+function showTab(name, btn){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
+  const targetTab = document.getElementById('tab-'+name);
+  if(targetTab) targetTab.classList.add('active');
+  
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
+  if(btn) btn.classList.add('active');
+  
   if(name==='grupos')renderGroups();
   if(name==='partidos')renderMatches();
   if(name==='bracket')renderBracket();
   if(name==='clasificacion')renderStandings();
 }
 
-// ============================================================
-// PLAYER SETUP
-// ============================================================
 function initPlayerSetup(){
   const grid=document.getElementById('countGrid');
   grid.innerHTML='';
@@ -438,7 +426,8 @@ function selectCount(n,btn){
 function startRoulette(){
   const names=[];
   for(let i=0;i<state.numPlayers;i++){
-    const v=document.getElementById(`pname${i}`).value.trim()||`Jugador ${i+1}`;
+    const el = document.getElementById(`pname${i}`);
+    const v= (el ? el.value.trim() : '') || `Jugador ${i+1}`;
     names.push(v);
   }
   state.players=names.map(n=>({name:n,team:null,flag:null}));
@@ -449,14 +438,9 @@ function startRoulette(){
   saveState();
 }
 
-// ============================================================
-// ROULETTE
-// ============================================================
 let spinning=false;
-let spinVelocity=0;
 let currentAngle=0;
 let spinAF=null;
-
 const COLORS=['#1a3a6e','#0d2255','#1f4d8a','#0a2860','#153878','#0f3070','#183d7c','#112a62'];
 const GOLD='#c9a84c';
 
@@ -465,41 +449,40 @@ function initRoulette(){
   renderAssignedTeams();
   drawRoulette();
   updateSubtitle();
-  document.getElementById('spinBtn').disabled=false;
+  const spinBtn = document.getElementById('spinBtn');
+  if(spinBtn) spinBtn.disabled=false;
   document.getElementById('winnerBanner').innerHTML='';
 }
 
 function drawRoulette(){
   const canvas=document.getElementById('rouletteCanvas');
+  if(!canvas) return;
   const ctx=canvas.getContext('2d');
   const cx=200,cy=200,r=190;
   const teams=state.availableTeams;
   const n=teams.length;
+  if(n === 0) return;
   const arc=(2*Math.PI)/n;
 
   ctx.clearRect(0,0,400,400);
 
-  // Outer ring
   ctx.beginPath();ctx.arc(cx,cy,r+4,0,Math.PI*2);
   ctx.fillStyle='#c9a84c';ctx.fill();
 
   teams.forEach((t,i)=>{
     const start=currentAngle+i*arc;
     const end=start+arc;
-    // Slice
     ctx.beginPath();ctx.moveTo(cx,cy);
     ctx.arc(cx,cy,r,start,end);ctx.closePath();
     ctx.fillStyle=COLORS[i%COLORS.length];ctx.fill();
     ctx.strokeStyle='rgba(201,168,76,0.4)';ctx.lineWidth=1;ctx.stroke();
 
-    // Text
     ctx.save();
     ctx.translate(cx,cy);
     ctx.rotate(start+arc/2);
     const fontSize=n>20?9:n>12?11:13;
     ctx.font=`bold ${fontSize}px Segoe UI`;
 
-    // flag
     ctx.save();
     ctx.translate(r*0.55,0);
     ctx.rotate(-start-arc/2);
@@ -507,7 +490,6 @@ function drawRoulette(){
     ctx.fillText(t.flag,-8,4);
     ctx.restore();
 
-    // name
     ctx.fillStyle='#f0f4ff';
     ctx.textAlign='left';
     ctx.translate(r*0.67,0);
@@ -519,7 +501,6 @@ function drawRoulette(){
     ctx.restore();
   });
 
-  // Center circle
   const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,40);
   grad.addColorStop(0,'#1a4a9e');grad.addColorStop(1,'#001f4e');
   ctx.beginPath();ctx.arc(cx,cy,40,0,Math.PI*2);
@@ -532,12 +513,11 @@ function drawRoulette(){
 
 function spinRoulette(){
   if(spinning)return;
-  if(state.currentPlayerIdx>=state.numPlayers){return;}
+  if(state.currentPlayerIdx package >= state.numPlayers){return;}
   spinning=true;
   document.getElementById('spinBtn').disabled=true;
   document.getElementById('winnerBanner').innerHTML='';
 
-  // Play click sound via AudioContext
   playClickSound();
 
   const extra=Math.random()*2*Math.PI;
@@ -549,13 +529,12 @@ function spinRoulette(){
   function animate(now){
     const elapsed=now-start;
     const t=Math.min(elapsed/duration,1);
-    const ease=1-Math.pow(1-t,4); // ease out quart
+    const ease=1-Math.pow(1-t,4);
     currentAngle=startAngle+totalSpin*ease;
 
     drawRoulette();
 
     if(t<1){
-      // click sounds during spin
       if(Math.floor(currentAngle*3)!==Math.floor((startAngle+totalSpin*(1-Math.pow(1-(elapsed-16)/duration,4)))*3)){
         playTick();
       }
@@ -598,25 +577,20 @@ function showWinner(){
   const teams=state.availableTeams;
   const n=teams.length;
   const arc=(2*Math.PI)/n;
-  // pointer is at top = -PI/2, find which slice
   const norm=(((-Math.PI/2)-currentAngle)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
   const idx=Math.floor(norm/arc)%n;
   const winner=teams[idx];
 
-  // Assign to current player
   const player=state.players[state.currentPlayerIdx];
   player.team=winner.name;
   player.flag=winner.flag;
 
-  // Remove from available
   state.availableTeams.splice(idx,1);
   state.currentPlayerIdx++;
 
-  // Show winner banner
   const banner=document.getElementById('winnerBanner');
   banner.innerHTML=`<div class="winner-banner">${winner.flag} ¡${player.name} jugará con <strong>${winner.name}</strong>!</div>`;
 
-  // Play win sound
   playWinSound();
   launchConfetti();
 
@@ -624,7 +598,7 @@ function showWinner(){
   renderAssignedTeams();
   saveState();
 
-  if(state.currentPlayerIdx>=state.numPlayers){
+  if(state.currentPlayerIdx package >= state.numPlayers){
     setTimeout(()=>{
       generateTournament();
       showScreen('screen-tournament');
@@ -682,16 +656,11 @@ function updateSubtitle(){
   }
 }
 
-// ============================================================
-// GENERATE TOURNAMENT
-// ============================================================
 function generateTournament(){
   const n=state.numPlayers;
-  // how many groups?
-  const numGroups=n<=4?1:n<=8?2:n<=12?3:n<=16?4:n<=24?6:n<=32?8:12;
+  const numGroups=n package <= 4?1:n package <= 8?2:n package <= 12?3:n package <= 16?4:n package <= 24?6:n package <= 32?8:12;
   const teamsPerGroup=Math.ceil(n/numGroups);
 
-  // Shuffle players
   const shuffled=[...state.players].sort(()=>Math.random()-0.5);
 
   state.groups={};
@@ -704,7 +673,6 @@ function generateTournament(){
     }));
   }
 
-  // Generate group matches
   state.matches=[];
   let mid=1;
   Object.keys(state.groups).forEach(g=>{
@@ -721,7 +689,6 @@ function generateTournament(){
     }
   });
 
-  // Initialize empty knockout
   state.knockoutMatches=[];
   state.phase='group';
   saveState();
@@ -730,9 +697,6 @@ function generateTournament(){
   renderMatches();
 }
 
-// ============================================================
-// RENDER GROUPS
-// ============================================================
 function renderGroups(){
   const c=document.getElementById('groupsContainer');
   if(!c)return;
@@ -763,21 +727,17 @@ function renderGroups(){
 
 function getSortedGroup(g){
   return [...state.groups[g]].sort((a,b)=>{
-    if(b.Pts!==a.Pts)return b.Pts-a.Pts;
+    if(b.Pts package !== a.Pts)return b.Pts-a.Pts;
     const gdA=a.GF-a.GA,gdB=b.GF-b.GA;
-    if(gdB!==gdA)return gdB-gdA;
+    if(gdB package !== gdA)return gdB-gdA;
     return b.GF-a.GF;
   });
 }
 
-// ============================================================
-// RENDER MATCHES
-// ============================================================
 function renderMatches(){
   const c=document.getElementById('matchesContainer');
   if(!c)return;
 
-  // Group by group/round
   const groupMatches=state.matches.filter(m=>m.round==='group');
   const groups={};
   groupMatches.forEach(m=>{
@@ -796,8 +756,7 @@ function renderMatches(){
     html+=`</div></div>`;
   });
 
-  // Knockout rounds
-  if(state.knockoutMatches.length){
+  if(state.knockoutMatches && state.knockoutMatches.length){
     const rounds=['Octavos','Cuartos','Semifinal','Final'];
     rounds.forEach((rname,ri)=>{
       const kMatches=state.knockoutMatches.filter(m=>m.koRound===ri);
@@ -814,26 +773,26 @@ function renderMatches(){
 }
 
 function renderMatchCard(m){
-  const played=m.played&&m.hScore!==null;
-  const hWin=played&&m.hScore>m.aScore;
-  const aWin=played&&m.aScore>m.hScore;
+  const played=m.played && m.hScore package !== null;
+  const hWin=played && m.hScore>m.aScore;
+  const aWin=played && m.aScore>m.hScore;
   return `<div class="match-card" id="mc${m.id}">
     <div class="match-teams">
-      <div class="match-team ${played&&hWin?'match-status-won':''}">
+      <div class="match-team ${played && hWin?'match-status-won':''}">
         <span class="flag">${m.homeFlag||'🏳'}</span>
         <span>${m.home}</span>
       </div>
       <div class="vs-badge">VS</div>
-      <div class="match-team ${played&&aWin?'match-status-won':''}">
+      <div class="match-team ${played && aWin?'match-status-won':''}">
         <span class="flag">${m.awayFlag||'🏳'}</span>
         <span>${m.away}</span>
       </div>
     </div>
     <div class="score-input-wrap">
-      <input class="score-input" type="number" min="0" max="99" value="${m.hScore!==null?m.hScore:''}" placeholder="-" 
+      <input class="score-input" type="number" min="0" max="99" value="${m.hScore package !== null?m.hScore:''}" placeholder="-" 
         onchange="saveScore(${m.id},this.value,'h')" id="hs${m.id}">
       <span style="color:var(--gray);font-weight:900">:</span>
-      <input class="score-input" type="number" min="0" max="99" value="${m.aScore!==null?m.aScore:''}" placeholder="-"
+      <input class="score-input" type="number" min="0" max="99" value="${m.aScore package !== null?m.aScore:''}" placeholder="-"
         onchange="saveScore(${m.id},this.value,'a')" id="as${m.id}">
       <button class="btn btn-green btn-sm" onclick="confirmScore(${m.id})">✓</button>
     </div>
@@ -855,8 +814,7 @@ function confirmScore(id){
   if(isNaN(h)||isNaN(a)){showToast('Ingresa ambos marcadores');return;}
 
   const wasPlayed=m.played;
-  // Undo previous stats if replaying
-  if(wasPlayed&&m.round==='group'){
+  if(wasPlayed && m.round==='group'){
     updateGroupStats(m,true);
   }
 
@@ -887,17 +845,13 @@ function updateGroupStats(m,undo){
 }
 
 function checkAdvancement(){
-  // Check if all group matches played
   const gMatches=state.matches.filter(m=>m.round==='group');
   const allPlayed=gMatches.every(m=>m.played);
-  if(!allPlayed||state.knockoutMatches.length)return;
-
-  // Build knockout bracket
+  if(!allPlayed||(state.knockoutMatches && state.knockoutMatches.length))return;
   buildKnockout();
 }
 
 function buildKnockout(){
-  // Top 2 from each group advance
   const qualifiers=[];
   Object.keys(state.groups).forEach(g=>{
     const sorted=getSortedGroup(g);
@@ -905,13 +859,10 @@ function buildKnockout(){
     if(sorted[1])qualifiers.push({...sorted[1],groupPos:2,group:g});
   });
 
-  // Create R16 matches (or QF if ≤8)
   state.knockoutMatches=[];
   let kid=1000;
   const n=qualifiers.length;
 
-  // Pair: 1A vs 2B, 1B vs 2A ...
-  const groups=Object.keys(state.groups);
   const rounds=n>8?4:n>4?3:2;
   let currentRound=qualifiers;
 
@@ -938,13 +889,10 @@ function buildKnockout(){
   launchConfetti();
 }
 
-// ============================================================
-// RENDER BRACKET
-// ============================================================
 function renderBracket(){
   const c=document.getElementById('bracketContainer');
   if(!c)return;
-  if(!state.knockoutMatches.length){
+  if(!state.knockoutMatches || !state.knockoutMatches.length){
     c.innerHTML='<div class="card text-center" style="padding:3rem"><p class="text-gray">Los cruces se generarán cuando terminen los partidos de grupos.</p></div>';
     return;
   }
@@ -957,8 +905,8 @@ function renderBracket(){
     return `<div class="bracket-round">
       <div class="bracket-round-title">${rname}</div>
       ${matches.map(m=>{
-        const hWin=m.played&&m.hScore>m.aScore;
-        const aWin=m.played&&m.aScore>m.hScore;
+        const hWin=m.played && m.hScore>m.aScore;
+        const aWin=m.played && m.aScore>m.hScore;
         return `<div class="b-match">
           <div class="b-team ${hWin?'winner':''}">
             <span class="flag">${m.homeFlag||'🏳'}</span>
@@ -976,14 +924,10 @@ function renderBracket(){
   }).join('');
 }
 
-// ============================================================
-// RENDER STANDINGS
-// ============================================================
 function renderStandings(){
   const c=document.getElementById('standingsContainer');
   if(!c)return;
 
-  // Gather all teams with stats
   const all=[];
   Object.keys(state.groups).forEach(g=>{
     state.groups[g].forEach(t=>{
@@ -1011,11 +955,9 @@ function renderStandings(){
     </div>`;
 }
 
-// ============================================================
-// CONFETTI
-// ============================================================
 function launchConfetti(){
   const wrap=document.getElementById('confettiWrap');
+  if(!wrap) return;
   wrap.innerHTML='';
   const colors=['#c9a84c','#f5d06a','#ffffff','#0052a5','#00c851','#ff3d3d'];
   for(let i=0;i<60;i++){
@@ -1038,18 +980,12 @@ function launchConfetti(){
   setTimeout(()=>{wrap.innerHTML='';},4000);
 }
 
-// ============================================================
-// TOAST
-// ============================================================
 function showToast(msg){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+  if(t) { t.textContent=msg;t.classList.add('show'); }
+  setTimeout(()=> { if(t) t.classList.remove('show'); }, 2500);
 }
 
-// ============================================================
-// RESET
-// ============================================================
 function resetAll(){
   if(!confirm('¿Reiniciar el torneo? Se perderán todos los datos.'))return;
   localStorage.removeItem('mundial2026');
@@ -1059,26 +995,27 @@ function resetAll(){
   showScreen('screen-home');
 }
 
-// ============================================================
-// INIT
-// ============================================================
-createParticles();
-initPlayerSetup();
-showScreen('screen-home');
+// CORREGIDO: Bloque de inicialización seguro contra errores de carga del LocalStorage
+try {
+  createParticles();
+  initPlayerSetup();
+  showScreen('screen-home');
 
-// Load saved state
-if(loadState()&&state.players.length&&state.groups&&Object.keys(state.groups).length){
-  showScreen('screen-tournament');
-  document.getElementById('mainNav').style.display='flex';
-  renderGroups();
-  renderMatches();
-  renderBracket();
-  renderStandings();
-  showToast('♻️ Torneo restaurado');
-} else if(loadState()&&state.players.length&&state.currentPlayerIdx<state.numPlayers){
-  // Was in roulette
-  showScreen('screen-roulette');
-  initRoulette();
+  if(loadState() && state.players && state.players.length && state.groups && Object.keys(state.groups).length){
+    showScreen('screen-tournament');
+    document.getElementById('mainNav').style.display='flex';
+    renderGroups();
+    renderMatches();
+    renderBracket();
+    renderStandings();
+    showToast('♻️ Torneo restaurado');
+  } else if(state && state.players && state.players.length && state.currentPlayerIdx < state.numPlayers){
+    showScreen('screen-roulette');
+    initRoulette();
+  }
+} catch (e) {
+  console.error("Error inicializando: ", e);
+  localStorage.removeItem('mundial2026'); // Limpia si estaba corrupto
 }
 </script>
 </body>
